@@ -5,8 +5,9 @@ window.addEventListener('DOMContentLoaded', () => {
   const guideCanvas = document.getElementById('guideCanvas');
   const gCtx = guideCanvas.getContext('2d');
 
-  // DOM HUD & Menus
+  // Elementos do HUD e Menus
   const hudName = document.getElementById('hudName');
+  const hudTimer = document.getElementById('hudTimer');
   const hudScore = document.getElementById('hudScore');
   const hudRecord = document.getElementById('hudRecord');
   const overlay = document.getElementById('screenOverlay');
@@ -19,14 +20,14 @@ window.addEventListener('DOMContentLoaded', () => {
   const guideTitle = document.getElementById('guideTitle');
   const guideTextContainer = document.getElementById('guideTextContainer');
 
-  // Grupos de Controles Touch
+  // Grupos de Controles Mobile
   const runnerControls = document.getElementById('runnerControls');
   const singleActionControls = document.getElementById('singleActionControls');
   const lrControls = document.getElementById('lrControls');
   const riverControls = document.getElementById('riverControls');
   const bowlingControls = document.getElementById('bowlingControls');
 
-  // Botões
+  // Botões de Ação
   const btnJump = document.getElementById('btnJump');
   const btnDuck = document.getElementById('btnDuck');
   const btnSingleAction = document.getElementById('btnSingleAction');
@@ -46,13 +47,25 @@ window.addEventListener('DOMContentLoaded', () => {
   let currentGame = 'runner';
   let gameState = 'START';
   let score = 0;
-  const hiScores = { runner: 0, flappy: 0, breakout: 0, river: 0, bowling: 0 };
   let particles = [];
+
+  // Temporizador Global de 60 segundos
+  let gameTimeLeft = 60;
+  let lastSecondTimestamp = performance.now();
+
+  // Histórico de Recordes Salvos
+  const hiScores = {
+    runner: parseInt(localStorage.getItem('pixel_record_runner') || '0', 10),
+    flappy: parseInt(localStorage.getItem('pixel_record_flappy') || '0', 10),
+    breakout: parseInt(localStorage.getItem('pixel_record_breakout') || '0', 10),
+    river: parseInt(localStorage.getItem('pixel_record_river') || '0', 10),
+    bowling: parseInt(localStorage.getItem('pixel_record_bowling') || '0', 10)
+  };
 
   let lastFrameTime = performance.now();
   const fpsInterval = 1000 / 60;
 
-  // Personagens e suas comidinhas
+  // Banco de Dados de Personagens e Alimentos
   const charactersData = {
     runner: [
       { id: 'capivara', name: 'Capivara', badge: '#8d6e63', foodName: 'Melancia (+30 PTS)', foodType: 'watermelon' },
@@ -184,7 +197,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // DESENHO DAS COMIDINHAS EM PIXEL ART
   function drawPixelFood(targetCtx, x, y, foodType) {
     const s = 2;
     targetCtx.save();
@@ -219,7 +231,6 @@ window.addEventListener('DOMContentLoaded', () => {
     targetCtx.restore();
   }
 
-  // DESENHOS DOS ANIMAIS
   function drawRunnerAnimal(targetCtx, x, y, type, grounded, isDucking) {
     const s = 2;
     targetCtx.save();
@@ -480,7 +491,7 @@ window.addEventListener('DOMContentLoaded', () => {
             continue;
           } else {
             spawnParticles(a.x + 16, a.y + 16, '#ff4757', 14);
-            gameOver();
+            gameOver('COLIDIU COM O OBSTÁCULO!');
             return;
           }
         }
@@ -563,7 +574,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
       if (b.y < 0) b.y = 0;
       if (b.y + b.h > canvas.height) {
-        gameOver();
+        gameOver('CAIU NO CHÃO!');
         return;
       }
 
@@ -591,7 +602,7 @@ window.addEventListener('DOMContentLoaded', () => {
           (b.y < pipe.topH || b.y + b.h > pipe.bottomY)
         ) {
           spawnParticles(b.x + 10, b.y + 10, '#ff4757', 15);
-          gameOver();
+          gameOver('BATEU NO CANO!');
           return;
         }
 
@@ -720,7 +731,9 @@ window.addEventListener('DOMContentLoaded', () => {
         this.init();
       }
 
-      if (b.y - b.r > canvas.height) gameOver();
+      if (b.y - b.r > canvas.height) {
+        gameOver('A BOLINHA CAIU!');
+      }
     },
 
     draw() {
@@ -796,7 +809,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
       this.fuelLevel -= 0.038;
       if (this.fuelLevel <= 0) {
-        gameOver();
+        gameOver('FICOU SEM COMBUSTÍVEL!');
         return;
       }
 
@@ -806,7 +819,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
       if (p.x < this.riverLeft || p.x + p.w > this.riverRight) {
         spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#ff4757', 15);
-        gameOver();
+        gameOver('BATEU NA MARGEM!');
         return;
       }
 
@@ -889,7 +902,7 @@ window.addEventListener('DOMContentLoaded', () => {
           p.y + p.h > en.y
         ) {
           spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#ff4757', 15);
-          gameOver();
+          gameOver('BATEU NUM INIMIGO!');
           return;
         }
 
@@ -941,7 +954,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // 5. BOLICHE (COM TEMPO 60s, CHANCES/SPARE E MIRA PENDULAR ATIVA)
+  // 5. BOLICHE
   const bowlingGame = {
     ball: { x: 300, y: 270, r: 10, vx: 0, vy: 0, rolling: false },
     aimX: 300,
@@ -949,18 +962,13 @@ window.addEventListener('DOMContentLoaded', () => {
     pins: [],
     power: 0,
     powerDir: 1,
-    phase: 'AIM', // 'AIM' -> 'POWER' -> 'ROLL' -> 'ROUND_OVER'
-    timeLeft: 60,
-    lastSecondTime: 0,
-    shotAttempt: 1, // 1ª bola ou 2ª bola (Spare)
-    pinsStanding: 10,
+    phase: 'AIM',
+    shotAttempt: 1,
     feedbackText: '',
     feedbackTimer: 0,
     pauseTimer: 0,
 
     init() {
-      this.timeLeft = 60;
-      this.lastSecondTime = performance.now();
       this.shotAttempt = 1;
       this.feedbackText = '';
       this.feedbackTimer = 0;
@@ -986,7 +994,6 @@ window.addEventListener('DOMContentLoaded', () => {
           });
         });
       });
-      this.pinsStanding = 10;
     },
 
     resetBall() {
@@ -1017,33 +1024,18 @@ window.addEventListener('DOMContentLoaded', () => {
     },
 
     update() {
-      // Cronômetro de 60s
-      const now = performance.now();
-      if (now - this.lastSecondTime >= 1000) {
-        this.timeLeft--;
-        this.lastSecondTime = now;
-        if (this.timeLeft <= 0) {
-          this.timeLeft = 0;
-          gameOver();
-          return;
-        }
-      }
-
-      // Mira pendular automática viva (não fica estático!)
       if (this.phase === 'AIM') {
         this.aimX += this.aimDir * 2.4;
         if (this.aimX < 235) { this.aimX = 235; this.aimDir = 1; }
         if (this.aimX > 365) { this.aimX = 365; this.aimDir = -1; }
       }
 
-      // Barra de força oscilante
       if (this.phase === 'POWER') {
         this.power += this.powerDir * 3.2;
         if (this.power > 100) { this.power = 100; this.powerDir = -1; }
         if (this.power < 0) { this.power = 0; this.powerDir = 1; }
       }
 
-      // Movimento da Bola
       if (this.phase === 'ROLL' && this.ball.rolling) {
         this.ball.x += this.ball.vx;
         this.ball.y += this.ball.vy;
@@ -1057,7 +1049,7 @@ window.addEventListener('DOMContentLoaded', () => {
             pin.alive = false;
             pin.fallOffset = (Math.random() - 0.5) * 8;
             hitThisFrame++;
-            score += 10; // 10 Pontos por pino derrubado
+            score += 10;
             spawnParticles(pin.baseX, pin.baseY, '#ffffff', 5);
           }
         });
@@ -1067,19 +1059,16 @@ window.addEventListener('DOMContentLoaded', () => {
           playSfx('hit');
         }
 
-        // Chegou ao fim da pista
         if (this.ball.y < 50) {
           this.ball.rolling = false;
           this.phase = 'ROUND_OVER';
           this.pauseTimer = 0;
 
-          // Contar pinos restantes
           const remaining = this.pins.filter(p => p.alive).length;
 
           if (this.shotAttempt === 1) {
             if (remaining === 0) {
-              // STRIKE!
-              score += 100; // Bônus Strike
+              score += 100;
               updateHUD();
               playSfx('strike');
               this.feedbackText = 'STRIKE! +100 PTS';
@@ -1087,16 +1076,13 @@ window.addEventListener('DOMContentLoaded', () => {
               this.shotAttempt = 1;
               setTimeout(() => this.resetAllPins(), 700);
             } else {
-              // Teve sobras -> Dá a 2ª chance (Spare) mantendo apenas os que sobraram
               this.feedbackText = `RESTAM ${remaining} PINOS! 2ª CHANCE`;
               this.feedbackTimer = 60;
               this.shotAttempt = 2;
             }
           } else {
-            // 2ª Chance
             if (remaining === 0) {
-              // SPARE!
-              score += 50; // Bônus Spare
+              score += 50;
               updateHUD();
               playSfx('strike');
               this.feedbackText = 'SPARE! +50 PTS';
@@ -1127,7 +1113,6 @@ window.addEventListener('DOMContentLoaded', () => {
       ctx.fillStyle = '#2f3542';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Pista em perspectiva
       ctx.fillStyle = '#f1c40f';
       ctx.beginPath();
       ctx.moveTo(250, 50);
@@ -1137,7 +1122,6 @@ window.addEventListener('DOMContentLoaded', () => {
       ctx.closePath();
       ctx.fill();
 
-      // Pinos
       this.pins.forEach(pin => {
         if (pin.alive) {
           ctx.fillStyle = '#ffffff';
@@ -1150,7 +1134,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-      // Mira viva oscilando
       if (this.phase === 'AIM' || this.phase === 'POWER') {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
         ctx.beginPath();
@@ -1159,7 +1142,6 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
       }
 
-      // Bola de Boliche
       const char = charactersData.bowling[selectedCharacter.bowling];
       const bx = this.ball.rolling ? this.ball.x : this.aimX;
       ctx.fillStyle = char.color;
@@ -1171,7 +1153,6 @@ window.addEventListener('DOMContentLoaded', () => {
       ctx.fillRect(bx - 2, this.ball.y - 2, 2, 2);
       ctx.fillRect(bx + 2, this.ball.y - 2, 2, 2);
 
-      // Barra de Força
       if (this.phase === 'POWER') {
         ctx.fillStyle = '#1e272e';
         ctx.fillRect(470, 95, 18, 120);
@@ -1183,18 +1164,12 @@ window.addEventListener('DOMContentLoaded', () => {
         ctx.fillText('FORÇA', 463, 85);
       }
 
-      // HUD Especial do Boliche (TEMPO 01:00 e BOLA 1 ou 2)
       ctx.fillStyle = '#1e272e';
-      ctx.fillRect(15, 12, 180, 36);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '9px monospace';
-      const secStr = String(this.timeLeft % 60).padStart(2, '0');
-      const minStr = String(Math.floor(this.timeLeft / 60)).padStart(2, '0');
-      ctx.fillText(`TEMPO: ${minStr}:${secStr}`, 24, 26);
+      ctx.fillRect(15, 12, 120, 24);
       ctx.fillStyle = this.shotAttempt === 1 ? '#2ed573' : '#ffa502';
-      ctx.fillText(`TENTATIVA: ${this.shotAttempt}ª BOLA`, 24, 40);
+      ctx.font = '9px monospace';
+      ctx.fillText(`BOLA: ${this.shotAttempt}ª CHANCE`, 22, 28);
 
-      // Texto de Feedback (Strike / Spare / Restantes)
       if (this.feedbackTimer > 0) {
         ctx.fillStyle = '#feca57';
         ctx.font = '12px monospace';
@@ -1205,7 +1180,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // ATUALIZAÇÃO DO GUIA VISUAL DE REGRAS E DESENHOS
+  // Painel de Instruções Dinâmico
   function updateGuidePanel() {
     gCtx.clearRect(0, 0, guideCanvas.width, guideCanvas.height);
     guideTitle.textContent = `MANUAL: ${hudName.textContent}`;
@@ -1219,6 +1194,7 @@ window.addEventListener('DOMContentLoaded', () => {
       drawPixelFood(gCtx, 115, 36, char.foodType);
 
       guideTextContainer.innerHTML = `
+        <div class="guide-line"><span class="guide-badge">CRONÔMETRO [01:00]</span> Você tem 60 segundos para pegar o máximo de comidinhas e desviar dos obstáculos!</div>
         <div class="guide-line"><span class="guide-badge">PULAR [W / CIMA]</span> Salte por cima de pedras e arbustos.</div>
         <div class="guide-line"><span class="guide-badge">ABAIXAR [S / BAIXO]</span> Deslize por baixo de obstáculos altos.</div>
         <div class="guide-line"><span class="guide-badge">COMIDA FAVORITA</span> Colete <strong>${char.foodName}</strong> para bônus de pontos!</div>
@@ -1231,6 +1207,7 @@ window.addEventListener('DOMContentLoaded', () => {
       gCtx.fillRect(100, 60, 24, 30);
 
       guideTextContainer.innerHTML = `
+        <div class="guide-line"><span class="guide-badge">CRONÔMETRO [01:00]</span> Passe pelo maior número de canos em 60 segundos! (+10 PTS cada)</div>
         <div class="guide-line"><span class="guide-badge">VOAR [ESPAÇO / TOQUE]</span> Cada clique dá um impulso para cima.</div>
         <div class="guide-line"><span class="guide-badge">OBJETIVO</span> Passe pelo vão seguro entre os canos verdes (+10 PTS).</div>
       `;
@@ -1245,6 +1222,7 @@ window.addEventListener('DOMContentLoaded', () => {
       gCtx.fillRect(50, 65, 45, 10);
 
       guideTextContainer.innerHTML = `
+        <div class="guide-line"><span class="guide-badge">CRONÔMETRO [01:00]</span> Limpe as paredes de blocos o mais rápido possível antes do tempo zerar!</div>
         <div class="guide-line"><span class="guide-badge">SETAS ESQ / DIR</span> Mova a raquete para rebater a bola suavemente.</div>
         <div class="guide-line"><span class="guide-badge">OBJETIVO</span> Destrua todos os blocos (+20 PTS cada) sem deixar cair.</div>
       `;
@@ -1257,6 +1235,7 @@ window.addEventListener('DOMContentLoaded', () => {
       gCtx.fillRect(72, 60, 14, 18);
 
       guideTextContainer.innerHTML = `
+        <div class="guide-line"><span class="guide-badge">CRONÔMETRO [01:00]</span> Sobreviva e destrua inimigos em 1 minuto sem deixar o combustível acabar!</div>
         <div class="guide-line"><span class="guide-badge">W/A/S/D OU SETAS</span> Movimente-se livremente em 4 direções pelo rio.</div>
         <div class="guide-line"><span class="guide-badge">ESPAÇO / DISPARAR</span> Destrua barcos e helicópteros inimigos (+20 PTS).</div>
         <div class="guide-line"><span class="guide-badge">TANQUES FUEL</span> Passe por cima dos tanques para não ficar sem combustível!</div>
@@ -1271,21 +1250,36 @@ window.addEventListener('DOMContentLoaded', () => {
       gCtx.fill();
 
       guideTextContainer.innerHTML = `
-        <div class="guide-line"><span class="guide-badge">TEMPO [01:00]</span> Você tem 60 segundos para fazer a maior pontuação possível!</div>
-        <div class="guide-line"><span class="guide-badge">PONTOS</span> 10 PTS por pino | <strong>STRIKE</strong> (+100 BÔNUS) | <strong>SPARE</strong> (+50 BÔNUS).</div>
+        <div class="guide-line"><span class="guide-badge">CRONÔMETRO [01:00]</span> Derrube o máximo de pinos possível em 60 segundos! 10 PTS por pino | STRIKE (+100 BÔNUS) | SPARE (+50 BÔNUS).</div>
         <div class="guide-line"><span class="guide-badge">CHANCES</span> Não derrubou tudo? Ganhe a <strong>2ª Bola</strong> com os pinos que sobraram!</div>
         <div class="guide-line"><span class="guide-badge">LANÇAMENTO</span> A mira oscila viva: clique em <strong>LANÇAR</strong> para travar a mira e depois na força!</div>
       `;
     }
   }
 
-  // LOOP PRINCIPAL
+  // Loop de Renderização e Tempo
   function gameLoop(currentTime) {
     requestAnimationFrame(gameLoop);
 
     const elapsed = currentTime - lastFrameTime;
     if (elapsed < fpsInterval) return;
     lastFrameTime = currentTime - (elapsed % fpsInterval);
+
+    // Contagem Regressiva dos 60 segundos
+    if (gameState === 'RUNNING') {
+      const now = performance.now();
+      if (now - lastSecondTimestamp >= 1000) {
+        gameTimeLeft--;
+        lastSecondTimestamp = now;
+        updateHUD();
+
+        if (gameTimeLeft <= 0) {
+          gameTimeLeft = 0;
+          gameOver('O TEMPO ACABOU!');
+          return;
+        }
+      }
+    }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -1312,6 +1306,8 @@ window.addEventListener('DOMContentLoaded', () => {
   function startGame() {
     score = 0;
     particles = [];
+    gameTimeLeft = 60;
+    lastSecondTimestamp = performance.now();
     updateHUD();
     gameState = 'RUNNING';
     overlay.style.display = 'none';
@@ -1325,23 +1321,30 @@ window.addEventListener('DOMContentLoaded', () => {
     playSfx('coin');
   }
 
-  function gameOver() {
+  function gameOver(reason) {
     gameState = 'GAMEOVER';
     playSfx('hit');
 
     if (score > hiScores[currentGame]) {
       hiScores[currentGame] = score;
-      hudRecord.textContent = `RECORDE: ${score}`;
+      localStorage.setItem(`pixel_record_${currentGame}`, score);
     }
+    updateHUD();
 
-    overlayTitle.textContent = 'FIM DE JOGO!';
+    overlayTitle.textContent = reason || 'FIM DE JOGO!';
     overlayDesc.textContent = `VOCÊ FEZ ${score} PONTOS! QUER TENTAR DE NOVO?`;
     btnAction.textContent = 'JOGAR NOVAMENTE';
     overlay.style.display = 'flex';
   }
 
+  // Atualizador do HUD com Timer 01:00
   function updateHUD() {
+    const min = String(Math.floor(gameTimeLeft / 60)).padStart(2, '0');
+    const sec = String(gameTimeLeft % 60).padStart(2, '0');
+    if (hudTimer) hudTimer.textContent = `TEMPO: ${min}:${sec}`;
+
     hudScore.textContent = `PONTOS: ${score}`;
+    hudRecord.textContent = `RECORDE: ${hiScores[currentGame]}`;
   }
 
   function renderCharacterButtons() {
@@ -1366,6 +1369,7 @@ window.addEventListener('DOMContentLoaded', () => {
     currentGame = gameKey;
     gameState = 'START';
     particles = [];
+    gameTimeLeft = 60;
 
     tabButtons.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.game === gameKey);
@@ -1403,7 +1407,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     score = 0;
     updateHUD();
-    hudRecord.textContent = `RECORDE: ${hiScores[gameKey]}`;
 
     overlayTitle.textContent = hudName.textContent;
     overlayDesc.textContent = 'ESCOLHA SEU PERSONAGEM ACIMA E CLIQUE EM JOGAR!';
@@ -1419,7 +1422,7 @@ window.addEventListener('DOMContentLoaded', () => {
     tab.addEventListener('click', () => switchGame(tab.dataset.game));
   });
 
-  // TECLADO
+  // Eventos de Teclado
   window.addEventListener('keydown', e => {
     if (e.code === 'Space') {
       if (gameState === 'RUNNING') {
@@ -1465,7 +1468,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // TOUCH RUNNER
+  // Eventos de Touch
   btnJump.addEventListener('touchstart', e => { e.preventDefault(); runner.jump(); });
   btnJump.addEventListener('mousedown', () => runner.jump());
 
@@ -1474,11 +1477,9 @@ window.addEventListener('DOMContentLoaded', () => {
   btnDuck.addEventListener('mousedown', () => runner.setDuck(true));
   btnDuck.addEventListener('mouseup', () => runner.setDuck(false));
 
-  // TOUCH FLAPPY
   btnSingleAction.addEventListener('touchstart', e => { e.preventDefault(); flappy.flap(); });
   btnSingleAction.addEventListener('mousedown', () => flappy.flap());
 
-  // TOUCH REBATIDA
   function setupHold(btn, onStart, onEnd) {
     btn.addEventListener('touchstart', e => { e.preventDefault(); onStart(); });
     btn.addEventListener('touchend', e => { e.preventDefault(); onEnd(); });
@@ -1489,7 +1490,6 @@ window.addEventListener('DOMContentLoaded', () => {
   setupHold(btnMoveLeft, () => breakout.moveLeft = true, () => breakout.moveLeft = false);
   setupHold(btnMoveRight, () => breakout.moveRight = true, () => breakout.moveRight = false);
 
-  // TOUCH RIO (4 DIREÇÕES)
   setupHold(btnRivUp, () => riverGame.moveUp = true, () => riverGame.moveUp = false);
   setupHold(btnRivDown, () => riverGame.moveDown = true, () => riverGame.moveDown = false);
   setupHold(btnRivLeft, () => riverGame.moveLeft = true, () => riverGame.moveLeft = false);
@@ -1498,7 +1498,6 @@ window.addEventListener('DOMContentLoaded', () => {
   btnRiverShoot.addEventListener('touchstart', e => { e.preventDefault(); riverGame.shoot(); });
   btnRiverShoot.addEventListener('mousedown', () => riverGame.shoot());
 
-  // TOUCH BOLICHE
   setupHold(btnBowlLeft, () => bowlingGame.aimX = Math.max(220, bowlingGame.aimX - 8), () => {});
   setupHold(btnBowlRight, () => bowlingGame.aimX = Math.min(380, bowlingGame.aimX + 8), () => {});
   btnBowlThrow.addEventListener('touchstart', e => { e.preventDefault(); bowlingGame.triggerAction(); });
