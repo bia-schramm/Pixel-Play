@@ -433,7 +433,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const rand = Math.random();
 
         if (rand < 0.3) {
-          // Comidinha favorita do personagem
           const char = charactersData.runner[selectedCharacter.runner];
           this.obstacles.push({
             x: canvas.width + 10,
@@ -444,7 +443,6 @@ window.addEventListener('DOMContentLoaded', () => {
             foodType: char.foodType
           });
         } else if (rand < 0.65) {
-          // Obstáculo baixo (pular sobre ele)
           this.obstacles.push({
             x: canvas.width + 10,
             y: this.floorY - 24,
@@ -453,7 +451,6 @@ window.addEventListener('DOMContentLoaded', () => {
             type: 'ROCK'
           });
         } else {
-          // Obstáculo alto (pássaro/tronco alto - passar abaixado)
           this.obstacles.push({
             x: canvas.width + 10,
             y: this.floorY - 50,
@@ -468,7 +465,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const obs = this.obstacles[i];
         obs.x -= this.speed;
 
-        // Colisão
         if (
           a.x + 4 < obs.x + obs.w &&
           a.x + a.w - 4 > obs.x &&
@@ -517,7 +513,6 @@ window.addEventListener('DOMContentLoaded', () => {
       ctx.fillStyle = '#d35400';
       ctx.fillRect(0, this.floorY + 14, canvas.width, canvas.height - this.floorY - 14);
 
-      // Obstáculos e comidinhas
       this.obstacles.forEach(obs => {
         if (obs.type === 'FOOD') {
           drawPixelFood(ctx, obs.x, obs.y, obs.foodType);
@@ -527,7 +522,6 @@ window.addEventListener('DOMContentLoaded', () => {
           ctx.fillStyle = '#4b6584';
           ctx.fillRect(obs.x + 3, obs.y + 3, obs.w - 6, obs.h - 6);
         } else if (obs.type === 'HIGH_BIRD') {
-          // Tronco / Pássaro Alto
           ctx.fillStyle = '#eb4d4b';
           ctx.fillRect(obs.x, obs.y + 4, obs.w, obs.h - 8);
           ctx.fillStyle = '#ffffff';
@@ -748,7 +742,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // 4. RIO DE BATALHA (4 DIREÇÕES E VELOCIDADE SUAVE)
+  // 4. RIO DE BATALHA
   const riverGame = {
     player: { x: 285, y: 240, w: 26, h: 26, speed: 3.6 },
     bullets: [],
@@ -792,17 +786,14 @@ window.addEventListener('DOMContentLoaded', () => {
     update() {
       const p = this.player;
 
-      // 4 DIREÇÕES
       if (this.moveLeft) p.x -= p.speed;
       if (this.moveRight) p.x += p.speed;
       if (this.moveUp) p.y -= p.speed * 0.8;
       if (this.moveDown) p.y += p.speed * 0.8;
 
-      // Limites de tela Y
       if (p.y < 30) p.y = 30;
       if (p.y + p.h > canvas.height - 15) p.y = canvas.height - 15 - p.h;
 
-      // Consumo suave de combustível
       this.fuelLevel -= 0.038;
       if (this.fuelLevel <= 0) {
         gameOver();
@@ -813,14 +804,12 @@ window.addEventListener('DOMContentLoaded', () => {
       this.riverLeft = 120 + Math.sin(Date.now() / 2000) * 30;
       this.riverRight = 480 + Math.sin(Date.now() / 2000) * 30;
 
-      // Colisão margens
       if (p.x < this.riverLeft || p.x + p.w > this.riverRight) {
         spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#ff4757', 15);
         gameOver();
         return;
       }
 
-      // Projéteis
       for (let i = this.bullets.length - 1; i >= 0; i--) {
         const b = this.bullets[i];
         b.y -= 6.5;
@@ -846,7 +835,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Combustível
       for (let i = this.fuels.length - 1; i >= 0; i--) {
         const f = this.fuels[i];
         f.y += 1.6;
@@ -867,7 +855,6 @@ window.addEventListener('DOMContentLoaded', () => {
         if (f.y > canvas.height) this.fuels.splice(i, 1);
       }
 
-      // Inimigos
       for (let i = this.enemies.length - 1; i >= 0; i--) {
         const en = this.enemies[i];
         en.y += 1.5;
@@ -947,7 +934,6 @@ window.addEventListener('DOMContentLoaded', () => {
       ctx.fillStyle = char.secondary;
       ctx.fillRect(p.x + p.w / 2 - 2, p.y, 4, p.h);
 
-      // Barra de Combustível
       ctx.fillStyle = '#1e272e';
       ctx.fillRect(20, 290, 100, 14);
       ctx.fillStyle = this.fuelLevel > 25 ? '#2ed573' : '#ff4757';
@@ -955,29 +941,34 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // 5. BOLICHE COM PERSPECTIVA 2.5D REAL
+  // 5. BOLICHE (COM TEMPO 60s, CHANCES/SPARE E MIRA PENDULAR ATIVA)
   const bowlingGame = {
     ball: { x: 300, y: 270, r: 10, vx: 0, vy: 0, rolling: false },
     aimX: 300,
+    aimDir: 1,
     pins: [],
     power: 0,
     powerDir: 1,
-    phase: 'AIM',
-    resetTimer: 0,
+    phase: 'AIM', // 'AIM' -> 'POWER' -> 'ROLL' -> 'ROUND_OVER'
+    timeLeft: 60,
+    lastSecondTime: 0,
+    shotAttempt: 1, // 1ª bola ou 2ª bola (Spare)
+    pinsStanding: 10,
+    feedbackText: '',
+    feedbackTimer: 0,
+    pauseTimer: 0,
 
     init() {
-      this.ball.x = 300;
-      this.ball.y = 270;
-      this.ball.r = 10;
-      this.ball.vx = 0;
-      this.ball.vy = 0;
-      this.ball.rolling = false;
-      this.aimX = 300;
-      this.power = 0;
-      this.powerDir = 1;
-      this.phase = 'AIM';
-      this.resetTimer = 0;
+      this.timeLeft = 60;
+      this.lastSecondTime = performance.now();
+      this.shotAttempt = 1;
+      this.feedbackText = '';
+      this.feedbackTimer = 0;
+      this.resetAllPins();
+      this.resetBall();
+    },
 
+    resetAllPins() {
       this.pins = [];
       const rows = [
         [-30, -10, 10, 30],
@@ -995,6 +986,20 @@ window.addEventListener('DOMContentLoaded', () => {
           });
         });
       });
+      this.pinsStanding = 10;
+    },
+
+    resetBall() {
+      this.ball.x = 300;
+      this.ball.y = 270;
+      this.ball.r = 10;
+      this.ball.vx = 0;
+      this.ball.vy = 0;
+      this.ball.rolling = false;
+      this.aimX = 300;
+      this.power = 0;
+      this.powerDir = 1;
+      this.phase = 'AIM';
     },
 
     triggerAction() {
@@ -1005,52 +1010,116 @@ window.addEventListener('DOMContentLoaded', () => {
         this.phase = 'ROLL';
         this.ball.rolling = true;
         this.ball.x = this.aimX;
-        this.ball.vx = (this.aimX - 300) * 0.04;
-        this.ball.vy = -(3.2 + (this.power / 100) * 2.8);
+        this.ball.vx = (this.aimX - 300) * 0.045;
+        this.ball.vy = -(3.4 + (this.power / 100) * 3.2);
         playSfx('jump');
       }
     },
 
     update() {
+      // Cronômetro de 60s
+      const now = performance.now();
+      if (now - this.lastSecondTime >= 1000) {
+        this.timeLeft--;
+        this.lastSecondTime = now;
+        if (this.timeLeft <= 0) {
+          this.timeLeft = 0;
+          gameOver();
+          return;
+        }
+      }
+
+      // Mira pendular automática viva (não fica estático!)
+      if (this.phase === 'AIM') {
+        this.aimX += this.aimDir * 2.4;
+        if (this.aimX < 235) { this.aimX = 235; this.aimDir = 1; }
+        if (this.aimX > 365) { this.aimX = 365; this.aimDir = -1; }
+      }
+
+      // Barra de força oscilante
       if (this.phase === 'POWER') {
-        this.power += this.powerDir * 2.8;
+        this.power += this.powerDir * 3.2;
         if (this.power > 100) { this.power = 100; this.powerDir = -1; }
         if (this.power < 0) { this.power = 0; this.powerDir = 1; }
       }
 
+      // Movimento da Bola
       if (this.phase === 'ROLL' && this.ball.rolling) {
         this.ball.x += this.ball.vx;
         this.ball.y += this.ball.vy;
-        // Escala conforme a distância
         this.ball.r = Math.max(4, 10 * (this.ball.y / 270));
 
-        let hits = 0;
+        let hitThisFrame = 0;
         this.pins.forEach(pin => {
           if (!pin.alive) return;
           const dist = Math.hypot(this.ball.x - pin.baseX, this.ball.y - pin.baseY);
           if (dist < this.ball.r + 8) {
             pin.alive = false;
             pin.fallOffset = (Math.random() - 0.5) * 8;
-            hits++;
-            score += 10;
+            hitThisFrame++;
+            score += 10; // 10 Pontos por pino derrubado
             spawnParticles(pin.baseX, pin.baseY, '#ffffff', 5);
           }
         });
 
-        if (hits > 0) {
+        if (hitThisFrame > 0) {
           updateHUD();
-          playSfx(hits >= 4 ? 'strike' : 'hit');
+          playSfx('hit');
         }
 
+        // Chegou ao fim da pista
         if (this.ball.y < 50) {
           this.ball.rolling = false;
-          this.phase = 'DONE';
+          this.phase = 'ROUND_OVER';
+          this.pauseTimer = 0;
+
+          // Contar pinos restantes
+          const remaining = this.pins.filter(p => p.alive).length;
+
+          if (this.shotAttempt === 1) {
+            if (remaining === 0) {
+              // STRIKE!
+              score += 100; // Bônus Strike
+              updateHUD();
+              playSfx('strike');
+              this.feedbackText = 'STRIKE! +100 PTS';
+              this.feedbackTimer = 60;
+              this.shotAttempt = 1;
+              setTimeout(() => this.resetAllPins(), 700);
+            } else {
+              // Teve sobras -> Dá a 2ª chance (Spare) mantendo apenas os que sobraram
+              this.feedbackText = `RESTAM ${remaining} PINOS! 2ª CHANCE`;
+              this.feedbackTimer = 60;
+              this.shotAttempt = 2;
+            }
+          } else {
+            // 2ª Chance
+            if (remaining === 0) {
+              // SPARE!
+              score += 50; // Bônus Spare
+              updateHUD();
+              playSfx('strike');
+              this.feedbackText = 'SPARE! +50 PTS';
+              this.feedbackTimer = 60;
+            } else {
+              this.feedbackText = `FIM DA RODADA!`;
+              this.feedbackTimer = 50;
+            }
+            this.shotAttempt = 1;
+            setTimeout(() => this.resetAllPins(), 700);
+          }
         }
       }
 
-      if (this.phase === 'DONE') {
-        this.resetTimer++;
-        if (this.resetTimer > 75) this.init();
+      if (this.phase === 'ROUND_OVER') {
+        this.pauseTimer++;
+        if (this.pauseTimer > 45) {
+          this.resetBall();
+        }
+      }
+
+      if (this.feedbackTimer > 0) {
+        this.feedbackTimer--;
       }
     },
 
@@ -1058,7 +1127,7 @@ window.addEventListener('DOMContentLoaded', () => {
       ctx.fillStyle = '#2f3542';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Pista afunilando em perspectiva
+      // Pista em perspectiva
       ctx.fillStyle = '#f1c40f';
       ctx.beginPath();
       ctx.moveTo(250, 50);
@@ -1081,16 +1150,16 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-      // Mira
+      // Mira viva oscilando
       if (this.phase === 'AIM' || this.phase === 'POWER') {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
         ctx.beginPath();
         ctx.moveTo(this.aimX, 260);
         ctx.lineTo(this.aimX + (this.aimX - 300) * 0.4, 60);
         ctx.stroke();
       }
 
-      // Bola
+      // Bola de Boliche
       const char = charactersData.bowling[selectedCharacter.bowling];
       const bx = this.ball.rolling ? this.ball.x : this.aimX;
       ctx.fillStyle = char.color;
@@ -1098,13 +1167,40 @@ window.addEventListener('DOMContentLoaded', () => {
       ctx.arc(bx, this.ball.y, this.ball.r, 0, Math.PI * 2);
       ctx.fill();
 
+      ctx.fillStyle = char.ring;
+      ctx.fillRect(bx - 2, this.ball.y - 2, 2, 2);
+      ctx.fillRect(bx + 2, this.ball.y - 2, 2, 2);
+
       // Barra de Força
       if (this.phase === 'POWER') {
         ctx.fillStyle = '#1e272e';
-        ctx.fillRect(470, 100, 18, 120);
+        ctx.fillRect(470, 95, 18, 120);
         ctx.fillStyle = '#ff4757';
         const bh = (this.power / 100) * 116;
-        ctx.fillRect(472, 218 - bh, 14, bh);
+        ctx.fillRect(472, 213 - bh, 14, bh);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '8px monospace';
+        ctx.fillText('FORÇA', 463, 85);
+      }
+
+      // HUD Especial do Boliche (TEMPO 01:00 e BOLA 1 ou 2)
+      ctx.fillStyle = '#1e272e';
+      ctx.fillRect(15, 12, 180, 36);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '9px monospace';
+      const secStr = String(this.timeLeft % 60).padStart(2, '0');
+      const minStr = String(Math.floor(this.timeLeft / 60)).padStart(2, '0');
+      ctx.fillText(`TEMPO: ${minStr}:${secStr}`, 24, 26);
+      ctx.fillStyle = this.shotAttempt === 1 ? '#2ed573' : '#ffa502';
+      ctx.fillText(`TENTATIVA: ${this.shotAttempt}ª BOLA`, 24, 40);
+
+      // Texto de Feedback (Strike / Spare / Restantes)
+      if (this.feedbackTimer > 0) {
+        ctx.fillStyle = '#feca57';
+        ctx.font = '12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.feedbackText, canvas.width / 2, 160);
+        ctx.textAlign = 'left';
       }
     }
   };
@@ -1117,12 +1213,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
     if (currentGame === 'runner') {
       const char = charactersData.runner[selectedCharacter.runner];
-
-      // Desenhos no Canvas de Demonstração
       drawRunnerAnimal(gCtx, 15, 30, char.id, true, false);
       gCtx.fillStyle = '#778ca3';
-      gCtx.fillRect(65, 38, 18, 18); // Pedra
-      drawPixelFood(gCtx, 115, 36, char.foodType); // Comidinha
+      gCtx.fillRect(65, 38, 18, 18);
+      drawPixelFood(gCtx, 115, 36, char.foodType);
 
       guideTextContainer.innerHTML = `
         <div class="guide-line"><span class="guide-badge">PULAR [W / CIMA]</span> Salte por cima de pedras e arbustos.</div>
@@ -1138,7 +1232,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
       guideTextContainer.innerHTML = `
         <div class="guide-line"><span class="guide-badge">VOAR [ESPAÇO / TOQUE]</span> Cada clique dá um impulso para cima.</div>
-        <div class="guide-line"><span class="guide-badge">OBJETIVO</span> Passe pelo vão seguro entre os canos verdes.</div>
+        <div class="guide-line"><span class="guide-badge">OBJETIVO</span> Passe pelo vão seguro entre os canos verdes (+10 PTS).</div>
       `;
     } else if (currentGame === 'breakout') {
       gCtx.fillStyle = '#ff6b81';
@@ -1148,28 +1242,28 @@ window.addEventListener('DOMContentLoaded', () => {
       gCtx.fillStyle = '#1dd1a1';
       gCtx.fillRect(95, 15, 30, 10);
       gCtx.fillStyle = '#00d2d3';
-      gCtx.fillRect(50, 65, 45, 10); // Raquete
+      gCtx.fillRect(50, 65, 45, 10);
 
       guideTextContainer.innerHTML = `
-        <div class="guide-line"><span class="guide-badge">SETAS ESQ / DIR</span> Mova a raquete para rebater a bola.</div>
-        <div class="guide-line"><span class="guide-badge">OBJETIVO</span> Destrua todos os blocos coloridos sem deixar a bolinha cair.</div>
+        <div class="guide-line"><span class="guide-badge">SETAS ESQ / DIR</span> Mova a raquete para rebater a bola suavemente.</div>
+        <div class="guide-line"><span class="guide-badge">OBJETIVO</span> Destrua todos os blocos (+20 PTS cada) sem deixar cair.</div>
       `;
     } else if (currentGame === 'river') {
       gCtx.fillStyle = '#1e90ff';
       gCtx.fillRect(20, 0, 120, 90);
       gCtx.fillStyle = '#ffa502';
-      gCtx.fillRect(70, 15, 18, 18); // Fuel
+      gCtx.fillRect(70, 15, 18, 18);
       gCtx.fillStyle = '#feca57';
-      gCtx.fillRect(72, 60, 14, 18); // Jato
+      gCtx.fillRect(72, 60, 14, 18);
 
       guideTextContainer.innerHTML = `
-        <div class="guide-line"><span class="guide-badge">W/A/S/D OU SETAS</span> Mova-se para frente, trás e laterais.</div>
-        <div class="guide-line"><span class="guide-badge">ESPAÇO / DISPARAR</span> Destrua barcos e helicópteros inimigos.</div>
+        <div class="guide-line"><span class="guide-badge">W/A/S/D OU SETAS</span> Movimente-se livremente em 4 direções pelo rio.</div>
+        <div class="guide-line"><span class="guide-badge">ESPAÇO / DISPARAR</span> Destrua barcos e helicópteros inimigos (+20 PTS).</div>
         <div class="guide-line"><span class="guide-badge">TANQUES FUEL</span> Passe por cima dos tanques para não ficar sem combustível!</div>
       `;
     } else if (currentGame === 'bowling') {
       gCtx.fillStyle = '#ffffff';
-      gCtx.fillRect(75, 15, 8, 14); // Pino
+      gCtx.fillRect(75, 15, 8, 14);
       const char = charactersData.bowling[selectedCharacter.bowling];
       gCtx.fillStyle = char.color;
       gCtx.beginPath();
@@ -1177,9 +1271,10 @@ window.addEventListener('DOMContentLoaded', () => {
       gCtx.fill();
 
       guideTextContainer.innerHTML = `
-        <div class="guide-line"><span class="guide-badge">SETAS ESQ / DIR</span> Posicione a mira da bola na pista.</div>
-        <div class="guide-line"><span class="guide-badge">ESPAÇO [1x]</span> Trava a mira e inicia a barra de força.</div>
-        <div class="guide-line"><span class="guide-badge">ESPAÇO [2x]</span> Lança a bola para derrubar os pinos!</div>
+        <div class="guide-line"><span class="guide-badge">TEMPO [01:00]</span> Você tem 60 segundos para fazer a maior pontuação possível!</div>
+        <div class="guide-line"><span class="guide-badge">PONTOS</span> 10 PTS por pino | <strong>STRIKE</strong> (+100 BÔNUS) | <strong>SPARE</strong> (+50 BÔNUS).</div>
+        <div class="guide-line"><span class="guide-badge">CHANCES</span> Não derrubou tudo? Ganhe a <strong>2ª Bola</strong> com os pinos que sobraram!</div>
+        <div class="guide-line"><span class="guide-badge">LANÇAMENTO</span> A mira oscila viva: clique em <strong>LANÇAR</strong> para travar a mira e depois na força!</div>
       `;
     }
   }
@@ -1278,7 +1373,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     renderCharacterButtons();
 
-    // Alternância do Painel Touch
     runnerControls.style.display = 'none';
     singleActionControls.style.display = 'none';
     lrControls.style.display = 'none';
