@@ -13,7 +13,7 @@
 
   <div class="arcade-wrapper">
 
-    <!-- Topo: Seletor de Jogos -->
+    <!-- Topo: Seletor dos 5 Mini-Jogos -->
     <header class="arcade-nav">
       <div class="logo-box">
         <h1 class="logo-text">PIXEL PLAY</h1>
@@ -33,13 +33,15 @@
       <div class="char-options" id="characterOptions"></div>
     </section>
 
-    <!-- Tela do Console -->
+    <!-- Tela do Arcade -->
     <main class="console-screen" id="screenContainer">
       <div class="hud-bar">
-        <span class="hud-item" id="hudName">SALTO ANIMAL</span>
-        <span class="hud-item score" id="hudScore">PONTOS: 0</span>
-        <span class="hud-item record" id="hudRecord">RECORDE: 0</span>
-      </div>
+  <span class="hud-item" id="hudName">SALTO ANIMAL</span>
+  <!-- ADICIONE ESTA LINHA ABAIXO -->
+  <span class="hud-item timer" id="hudTimer">TEMPO: 01:00</span>
+  <span class="hud-item score" id="hudScore">PONTOS: 0</span>
+  <span class="hud-item record" id="hudRecord">RECORDE: 0</span>
+</div>
 
       <canvas id="gameCanvas" width="600" height="320"></canvas>
 
@@ -53,24 +55,24 @@
 
     <!-- Controles Touch para Celular / Tablet -->
     <section class="controller-deck">
-      <!-- Controles: Salto Animal (Pular + Abaixar) -->
+      <!-- Salto Animal -->
       <div class="touch-row runner-controls-row" id="runnerControls">
         <button class="action-touch-btn jump-btn" id="btnJump">PULAR [W / CIMA]</button>
         <button class="action-touch-btn duck-btn" id="btnDuck">ABAIXAR [S / BAIXO]</button>
       </div>
 
-      <!-- Controles: Voo Pixel (Apenas Voo) -->
+      <!-- Voo Pixel -->
       <div class="touch-row" id="singleActionControls" style="display: none;">
         <button class="action-touch-btn jump-btn" id="btnSingleAction">VOAR [ESPAÇO]</button>
       </div>
 
-      <!-- Controles: Rebatida (Esquerda / Direita) -->
+      <!-- Rebatida -->
       <div class="touch-row lr-row" id="lrControls" style="display: none;">
         <button class="lr-btn" id="btnMoveLeft">◀ ESQUERDA</button>
         <button class="lr-btn" id="btnMoveRight">DIREITA ▶</button>
       </div>
 
-      <!-- Controles: Rio de Batalha (4 Direções + Disparo) -->
+      <!-- Rio de Batalha -->
       <div class="touch-row river-deck-row" id="riverControls" style="display: none;">
         <div class="dpad-grid">
           <button class="d-key up" id="btnRivUp">▲</button>
@@ -84,7 +86,7 @@
         <button class="action-touch-btn fire-btn" id="btnRiverShoot">DISPARAR [ESPAÇO]</button>
       </div>
 
-      <!-- Controles: Boliche (Mira + Arremesso) -->
+      <!-- Boliche -->
       <div class="touch-row bowling-controls-row" id="bowlingControls" style="display: none;">
         <button class="lr-btn" id="btnBowlLeft">◀ MIRA</button>
         <button class="action-touch-btn bowl-btn" id="btnBowlThrow">LANÇAR [ESPAÇO]</button>
@@ -92,7 +94,7 @@
       </div>
     </section>
 
-    <!-- Guia Visual de Regras e Desenhos dos Elementos -->
+    <!-- Guia Visual de Regras -->
     <section class="game-guide-box">
       <div class="guide-header">
         <h3 class="guide-title" id="guideTitle">MANUAL DE INSTRUÇÕES</h3>
@@ -103,9 +105,7 @@
           <canvas id="guideCanvas" width="160" height="90"></canvas>
           <span class="preview-caption">ELEMENTOS DO JOGO</span>
         </div>
-        <div class="guide-text" id="guideTextContainer">
-          <!-- Inserido dinamicamente via JS -->
-        </div>
+        <div class="guide-text" id="guideTextContainer"></div>
       </div>
     </section>
 
