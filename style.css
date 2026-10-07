@@ -180,6 +180,11 @@ body {
   border-bottom: 2px solid #28243e;
 }
 
+.hud-item.timer {
+  color: var(--accent-coral);
+}
+
+
 .hud-item.score {
   color: var(--accent-mint);
 }
