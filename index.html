@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Pixel Play - Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="arcade-wrapper">
+
+    <!-- Topo: Seletor de Jogos -->
+    <header class="arcade-nav">
+      <div class="logo-box">
+        <h1 class="logo-text">PIXEL PLAY</h1>
+      </div>
+      <div class="tabs-list">
+        <button class="tab-btn active" data-game="runner">SALTO ANIMAL</button>
+        <button class="tab-btn" data-game="flappy">VOO PIXEL</button>
+        <button class="tab-btn" data-game="breakout">REBATIDA</button>
+        <button class="tab-btn" data-game="river">RIO DE BATALHA</button>
+        <button class="tab-btn" data-game="bowling">BOLICHE</button>
+      </div>
+    </header>
+
+    <!-- Barra de Escolha de Personagens -->
+    <section class="character-bar">
+      <span class="char-label">PERSONAGEM:</span>
+      <div class="char-options" id="characterOptions"></div>
+    </section>
+
+    <!-- Tela do Console -->
+    <main class="console-screen" id="screenContainer">
+      <div class="hud-bar">
+        <span class="hud-item" id="hudName">SALTO ANIMAL</span>
+        <span class="hud-item score" id="hudScore">PONTOS: 0</span>
+        <span class="hud-item record" id="hudRecord">RECORDE: 0</span>
+      </div>
+
+      <canvas id="gameCanvas" width="600" height="320"></canvas>
+
+      <!-- Overlay Iniciar / Game Over -->
+      <div class="overlay" id="screenOverlay">
+        <h2 class="overlay-title" id="overlayTitle">VAMOS LÁ!</h2>
+        <p class="overlay-desc" id="overlayDesc">ESCOLHA SEU PERSONAGEM E BORA JOGAR</p>
+        <button class="play-btn" id="btnAction">JOGAR AGORA</button>
+      </div>
+    </main>
+
+    <!-- Controles Touch para Celular / Tablet -->
+    <section class="controller-deck">
+      <!-- Controles: Salto Animal (Pular + Abaixar) -->
+      <div class="touch-row runner-controls-row" id="runnerControls">
+        <button class="action-touch-btn jump-btn" id="btnJump">PULAR [W / CIMA]</button>
+        <button class="action-touch-btn duck-btn" id="btnDuck">ABAIXAR [S / BAIXO]</button>
+      </div>
+
+      <!-- Controles: Voo Pixel (Apenas Voo) -->
+      <div class="touch-row" id="singleActionControls" style="display: none;">
+        <button class="action-touch-btn jump-btn" id="btnSingleAction">VOAR [ESPAÇO]</button>
+      </div>
+
+      <!-- Controles: Rebatida (Esquerda / Direita) -->
+      <div class="touch-row lr-row" id="lrControls" style="display: none;">
+        <button class="lr-btn" id="btnMoveLeft">◀ ESQUERDA</button>
+        <button class="lr-btn" id="btnMoveRight">DIREITA ▶</button>
+      </div>
+
+      <!-- Controles: Rio de Batalha (4 Direções + Disparo) -->
+      <div class="touch-row river-deck-row" id="riverControls" style="display: none;">
+        <div class="dpad-grid">
+          <button class="d-key up" id="btnRivUp">▲</button>
+          <div class="d-middle">
+            <button class="d-key left" id="btnRivLeft">◀</button>
+            <div class="d-center-dot"></div>
+            <button class="d-key right" id="btnRivRight">▶</button>
+          </div>
+          <button class="d-key down" id="btnRivDown">▼</button>
+        </div>
+        <button class="action-touch-btn fire-btn" id="btnRiverShoot">DISPARAR [ESPAÇO]</button>
+      </div>
+
+      <!-- Controles: Boliche (Mira + Arremesso) -->
+      <div class="touch-row bowling-controls-row" id="bowlingControls" style="display: none;">
+        <button class="lr-btn" id="btnBowlLeft">◀ MIRA</button>
+        <button class="action-touch-btn bowl-btn" id="btnBowlThrow">LANÇAR [ESPAÇO]</button>
+        <button class="lr-btn" id="btnBowlRight">MIRA ▶</button>
+      </div>
+    </section>
+
+    <!-- Guia Visual de Regras e Desenhos dos Elementos -->
+    <section class="game-guide-box">
+      <div class="guide-header">
+        <h3 class="guide-title" id="guideTitle">MANUAL DE INSTRUÇÕES</h3>
+      </div>
+      
+      <div class="guide-body">
+        <div class="guide-preview-canvas-wrap">
+          <canvas id="guideCanvas" width="160" height="90"></canvas>
+          <span class="preview-caption">ELEMENTOS DO JOGO</span>
+        </div>
+        <div class="guide-text" id="guideTextContainer">
+          <!-- Inserido dinamicamente via JS -->
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
